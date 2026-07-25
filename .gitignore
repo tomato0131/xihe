@@ -15,6 +15,8 @@ prototype/.local/
 .env.*
 !.env.example
 !.env.*.example
+!**/.env.example
+!**/.env.*.example
 prototype/infra/.env.local
 prototype/infra/.env.production
 admin-login.txt

@@ -24,7 +24,10 @@ const personSchema = z.object({
   calendarType: z.enum(['solar', 'lunar']), birthYearKnown: z.boolean().optional().default(true),
   isLeapMonth: z.boolean().optional().default(false), note: z.string().trim().max(2000).optional().default(''),
 })
-const loginSchema = z.object({ email: z.string().trim().email().max(255), password: z.string().min(10).max(128) })
+const loginSchema = z.object({
+  email: z.string().trim().min(3).max(255),
+  password: z.string().min(10).max(128)
+})
 const wechatLoginSchema = z.object({ code: z.string().trim().min(1).max(256) })
 const updatePersonSchema = z.object({
   name: z.string().trim().min(1).max(100).optional(), relation: z.string().trim().max(50).optional(),
@@ -709,13 +712,20 @@ async function archivePerson(userId, id) {
 }
 
 async function login(input) {
-  const { rows } = await pool.query('select user_id,email,password_salt,password_hash from auth.local_credentials where lower(email)=lower($1)',[input.email])
+  const identifier = input.email.trim().toLowerCase()
+  const { rows } = await pool.query(`
+    select c.user_id, c.email, c.username, c.password_salt, c.password_hash, p.role
+    from auth.local_credentials c
+    left join public.profiles p on p.id = c.user_id
+    where lower(c.email)=lower($1) or lower(c.username)=lower($1)
+    limit 1
+  `,[identifier])
   const credential = rows[0]
   if (!credential) return null
   const computed = Buffer.from(scryptSync(input.password,credential.password_salt,64).toString('hex'))
   const expected = Buffer.from(credential.password_hash)
   if (computed.length !== expected.length || !timingSafeEqual(computed,expected)) return null
-  return { token: issueToken({id:credential.user_id,email:credential.email}), user:{id:credential.user_id,email:credential.email} }
+  return { token: issueToken({id:credential.user_id,email:credential.email}), user:{id:credential.user_id,email:credential.email,username:credential.username,role:credential.role ?? 'user'} }
 }
 
 function hashWechatSessionKey(sessionKey) {

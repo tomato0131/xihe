@@ -1,10 +1,10 @@
 .env
 .env.*
 !.env.example
+!.env.*.example
 infra/.env.local
 .local/
 dist/
 .npm-cache/
 node_modules/
 *.log
-

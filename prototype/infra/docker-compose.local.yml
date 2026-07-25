@@ -15,6 +15,7 @@ services:
       - ../supabase/migrations/202607060001_initial_schema.sql:/docker-entrypoint-initdb.d/10-initial-schema.sql:ro
       - ./postgres/init/15-local-credentials.sql:/docker-entrypoint-initdb.d/15-local-credentials.sql:ro
       - ../supabase/migrations/202607090001_wechat_identities.sql:/docker-entrypoint-initdb.d/16-wechat-identities.sql:ro
+      - ../supabase/migrations/202607250001_admin_roles.sql:/docker-entrypoint-initdb.d/17-admin-roles.sql:ro
       - ./postgres/init/20-local-seed.sql:/docker-entrypoint-initdb.d/20-local-seed.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]

@@ -321,11 +321,11 @@ function App() {
 }
 
 function LoginScreen({ onLogin }) {
-  const [email, setEmail] = useState('demo@xihe.local')
+  const [email, setEmail] = useState('admin')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  return <div className="login-shell"><div className="login-sun">日</div><section className="login-card"><p className="eyebrow">重要的人，值得被记住</p><h1>羲和<span>。</span></h1><p className="login-lead">登录后，生日、分组与提醒会安全保存在你的专属空间。</p><form className="form" onSubmit={async e=>{e.preventDefault();setLoading(true);setError('');try{await api.login(email,password);onLogin()}catch{setError('邮箱或密码不正确')}finally{setLoading(false)}}}><label>邮箱<input type="email" required value={email} onChange={e=>setEmail(e.target.value)} /></label><label>密码<input type="password" required minLength={10} value={password} onChange={e=>setPassword(e.target.value)} placeholder="输入本地体验密码" /></label>{error&&<p className="form-error">{error}</p>}<button className="primary full" disabled={loading}>{loading?'正在登录…':'进入羲和'}</button></form><p className="login-note">本地开发环境 · 会话 8 小时后自动失效</p></section></div>
+  return <div className="login-shell"><div className="login-sun">日</div><section className="login-card"><p className="eyebrow">重要的人，值得被记住</p><h1>羲和<span>。</span></h1><p className="login-lead">登录后，生日、分组与提醒会安全保存在你的专属空间。</p><form className="form" onSubmit={async e=>{e.preventDefault();setLoading(true);setError('');try{await api.login(email,password);onLogin()}catch{setError('账号或密码不正确')}finally{setLoading(false)}}}><label>账号<input type="text" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="admin 或邮箱" /></label><label>密码<input type="password" required minLength={10} value={password} onChange={e=>setPassword(e.target.value)} placeholder="输入登录密码" /></label>{error&&<p className="form-error">{error}</p>}<button className="primary full" disabled={loading}>{loading?'正在登录…':'进入羲和'}</button></form><p className="login-note">本地开发环境 · 会话 8 小时后自动失效</p></section></div>
 }
 
 function formatTodayLine() {
