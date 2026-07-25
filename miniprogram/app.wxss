@@ -1,0 +1,50 @@
+page {
+  min-height: 100vh;
+  color: #2d2520;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(255, 211, 145, 0.48), transparent 34%),
+    linear-gradient(180deg, #f8efe3 0%, #f6ead9 46%, #efe0cd 100%);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+}
+
+.page-shell {
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: 40rpx 34rpx 64rpx;
+}
+
+.sun-mark {
+  width: 92rpx;
+  height: 92rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(145deg, #f4b75d, #f9db9a);
+  box-shadow: 0 20rpx 60rpx rgba(205, 126, 49, 0.28);
+}
+
+.card {
+  box-sizing: border-box;
+  border: 1rpx solid rgba(120, 82, 50, 0.12);
+  border-radius: 34rpx;
+  background: rgba(255, 252, 246, 0.74);
+  box-shadow: 0 24rpx 80rpx rgba(101, 67, 39, 0.1);
+  backdrop-filter: blur(18px);
+}
+
+.muted {
+  color: rgba(45, 37, 32, 0.58);
+}
+
+.primary-button {
+  height: 96rpx;
+  border-radius: 999rpx;
+  color: #fff;
+  background: linear-gradient(135deg, #9c5b2d 0%, #d68d43 100%);
+  box-shadow: 0 18rpx 44rpx rgba(156, 91, 45, 0.28);
+  font-size: 31rpx;
+  font-weight: 600;
+  line-height: 96rpx;
+}
+
+.primary-button::after {
+  border: 0;
+}

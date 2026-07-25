@@ -1,0 +1,32 @@
+.DS_Store
+
+# Dependencies and build output
+node_modules/
+dist/
+.npm-cache/
+.local/
+prototype/node_modules/
+prototype/dist/
+prototype/.npm-cache/
+prototype/.local/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+prototype/infra/.env.local
+prototype/infra/.env.production
+admin-login.txt
+**/admin-login.txt
+
+# Backups and database dumps
+*.dump
+*.sql.gz
+*.backup
+backups/
+prototype/backups/
+
+# Logs
+*.log
+logs/

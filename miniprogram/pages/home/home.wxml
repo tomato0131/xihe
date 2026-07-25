@@ -1,0 +1,78 @@
+<view class="page-shell home-page">
+  <view class="topbar">
+    <view>
+      <view class="eyebrow">羲和 · 今日时序</view>
+      <view class="title">生日关怀</view>
+    </view>
+    <button class="logout" bindtap="handleLogout">退出</button>
+  </view>
+
+  <view class="stats">
+    <view class="card stat-card">
+      <view class="stat-number">{{people.length}}</view>
+      <view class="stat-label">已记录的人</view>
+    </view>
+    <view class="card stat-card">
+      <view class="stat-number">{{reminders.length}}</view>
+      <view class="stat-label">三天内提醒</view>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="section-head">
+      <view class="section-title">需要提醒</view>
+      <view class="muted">{{todayText}}</view>
+    </view>
+
+    <view wx:if="{{reminders.length === 0}}" class="card empty-card">
+      未来三天暂无生日提醒，今天可以从容一点。
+    </view>
+
+    <view wx:for="{{reminders}}" wx:key="person_id" class="card reminder-card">
+      <view class="days">{{item.days === 0 ? '今天' : item.days + '天后'}}</view>
+      <view class="reminder-main">
+        <view class="person-name">{{item.name}}</view>
+        <view class="muted">{{item.relationship || '重要的人'}} · {{item.next_date}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="section-head">
+      <view class="section-title">人物</view>
+      <view class="muted">前 {{visiblePeople.length}} 位</view>
+    </view>
+
+    <view wx:if="{{people.length === 0}}" class="card empty-card">
+      当前账号还没有人物数据。请先在 Web 端录入，后续我们会补小程序新增入口。
+    </view>
+
+    <view wx:for="{{visiblePeople}}" wx:key="id" class="card person-card">
+      <view class="avatar">{{item.nameInitial}}</view>
+      <view class="person-main">
+        <view class="person-name">{{item.name}}</view>
+        <view class="muted">{{item.relationship || '未设置关系'}} · {{item.birth_month}}月{{item.birth_day}}日</view>
+      </view>
+      <view class="group-pill" wx:if="{{item.groupsText}}">{{item.groupsText}}</view>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="section-head">
+      <view class="section-title">最近关怀</view>
+      <view class="muted">最多 3 条</view>
+    </view>
+
+    <view wx:if="{{careRecords.length === 0}}" class="card empty-card">
+      暂无关怀记录。等第一次祝福、电话或礼物记录后，这里会成为一条温柔时间线。
+    </view>
+
+    <view wx:for="{{visibleCareRecords}}" wx:key="id" class="card care-card">
+      <view class="care-type">{{item.actionLabel}}</view>
+      <view class="care-main">
+        <view class="person-name">{{item.name}}</view>
+        <view class="muted">{{item.content || '已完成一次关怀'}} · {{item.dateText}}</view>
+      </view>
+    </view>
+  </view>
+</view>

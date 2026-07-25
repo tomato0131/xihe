@@ -1,0 +1,84 @@
+name: xihe-production
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: xihe-postgres
+    restart: unless-stopped
+    env_file:
+      - /data/xihe/config/.env.production
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init/00-local-auth.sql:/docker-entrypoint-initdb.d/00-auth-compat.sql:ro
+      - ../supabase/migrations/202607060001_initial_schema.sql:/docker-entrypoint-initdb.d/10-initial-schema.sql:ro
+      - ./postgres/init/15-local-credentials.sql:/docker-entrypoint-initdb.d/15-local-credentials.sql:ro
+      - ../supabase/migrations/202607090001_wechat_identities.sql:/docker-entrypoint-initdb.d/16-wechat-identities.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks:
+      - xihe-private
+
+  api:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.api
+    container_name: xihe-api
+    restart: unless-stopped
+    env_file:
+      - /data/xihe/config/.env.production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - /data/xihe/backups/json:/data/xihe/backups/json
+      - /data/xihe/uploads:/data/xihe/uploads
+      - /data/xihe/logs/api:/data/xihe/logs/api
+    expose:
+      - "8787"
+    networks:
+      - xihe-private
+    security_opt:
+      - no-new-privileges:true
+
+  web:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.web
+    container_name: xihe-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+    networks:
+      - xihe-private
+    security_opt:
+      - no-new-privileges:true
+
+  scheduler:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.api
+    container_name: xihe-scheduler
+    restart: unless-stopped
+    env_file:
+      - /data/xihe/config/.env.production
+    depends_on:
+      api:
+        condition: service_started
+    command: ["sh", "-c", "while true; do node server/run-daily-reminders.mjs; sleep 86400; done"]
+    networks:
+      - xihe-private
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  xihe-private:
+    driver: bridge
+
+volumes:
+  postgres-data:
+    name: xihe-postgres-data

@@ -1,0 +1,25 @@
+{
+  "name": "prototype",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node node_modules/vite/bin/vite.js --host 127.0.0.1",
+    "api": "node --env-file=infra/.env.local server/index.mjs",
+    "auth:bootstrap": "node --env-file=infra/.env.local server/bootstrap-local-users.mjs",
+    "auth:bootstrap-admin": "node --env-file=infra/.env.local server/bootstrap-admin.mjs",
+    "reminders:daily": "node --env-file=infra/.env.local server/run-daily-reminders.mjs",
+    "reminders:run": "node --env-file=infra/.env.local server/run-reminders.mjs",
+    "test:api": "node --env-file=infra/.env.local server/smoke-test.mjs",
+    "build": "node node_modules/vite/bin/vite.js build",
+    "preview": "node node_modules/vite/bin/vite.js preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "5.0.4",
+    "pg": "^8.22.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "vite": "6.4.2",
+    "zod": "^4.4.3"
+  }
+}

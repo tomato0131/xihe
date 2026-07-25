@@ -1,0 +1,56 @@
+.login-page {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.hero {
+  padding-top: 72rpx;
+}
+
+.eyebrow {
+  margin-top: 34rpx;
+  color: rgba(97, 66, 43, 0.72);
+  font-size: 24rpx;
+  letter-spacing: 6rpx;
+}
+
+.title {
+  margin-top: 20rpx;
+  color: #2c2019;
+  font-size: 92rpx;
+  font-weight: 500;
+  letter-spacing: 10rpx;
+}
+
+.subtitle {
+  width: 520rpx;
+  margin-top: 22rpx;
+  color: rgba(45, 37, 32, 0.62);
+  font-size: 29rpx;
+  line-height: 1.7;
+}
+
+.login-card {
+  padding: 42rpx;
+}
+
+.card-title {
+  font-size: 38rpx;
+  font-weight: 600;
+}
+
+.card-copy {
+  margin: 18rpx 0 36rpx;
+  color: rgba(45, 37, 32, 0.62);
+  font-size: 28rpx;
+  line-height: 1.6;
+}
+
+.hint {
+  margin-top: 28rpx;
+  color: rgba(45, 37, 32, 0.46);
+  font-size: 24rpx;
+  line-height: 1.5;
+  text-align: center;
+}

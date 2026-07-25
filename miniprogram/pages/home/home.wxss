@@ -1,0 +1,146 @@
+.topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-top: 18rpx;
+}
+
+.eyebrow {
+  color: rgba(97, 66, 43, 0.72);
+  font-size: 23rpx;
+  letter-spacing: 5rpx;
+}
+
+.title {
+  margin-top: 12rpx;
+  font-size: 52rpx;
+  font-weight: 600;
+}
+
+.logout {
+  margin: 0;
+  padding: 0 26rpx;
+  height: 64rpx;
+  border-radius: 999rpx;
+  color: rgba(45, 37, 32, 0.66);
+  background: rgba(255, 255, 255, 0.46);
+  font-size: 24rpx;
+  line-height: 64rpx;
+}
+
+.logout::after {
+  border: 0;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22rpx;
+  margin-top: 36rpx;
+}
+
+.stat-card {
+  padding: 30rpx;
+}
+
+.stat-number {
+  color: #9c5b2d;
+  font-size: 58rpx;
+  font-weight: 600;
+}
+
+.stat-label {
+  margin-top: 8rpx;
+  color: rgba(45, 37, 32, 0.56);
+  font-size: 25rpx;
+}
+
+.section {
+  margin-top: 44rpx;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20rpx;
+}
+
+.section-title {
+  font-size: 34rpx;
+  font-weight: 600;
+}
+
+.empty-card {
+  padding: 34rpx;
+  color: rgba(45, 37, 32, 0.56);
+  font-size: 27rpx;
+  line-height: 1.6;
+}
+
+.reminder-card,
+.person-card,
+.care-card {
+  display: flex;
+  align-items: center;
+  gap: 22rpx;
+  margin-bottom: 20rpx;
+  padding: 28rpx;
+}
+
+.days {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 96rpx;
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 999rpx;
+  color: #8d4d27;
+  background: rgba(243, 188, 103, 0.26);
+  font-size: 25rpx;
+  font-weight: 600;
+}
+
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 78rpx;
+  width: 78rpx;
+  height: 78rpx;
+  border-radius: 28rpx;
+  color: #fff;
+  background: linear-gradient(135deg, #9c5b2d, #d8a15e);
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.person-main,
+.reminder-main,
+.care-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.person-name {
+  margin-bottom: 8rpx;
+  overflow: hidden;
+  font-size: 31rpx;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.group-pill,
+.care-type {
+  max-width: 144rpx;
+  padding: 10rpx 16rpx;
+  border-radius: 999rpx;
+  color: rgba(97, 66, 43, 0.82);
+  background: rgba(255, 255, 255, 0.58);
+  font-size: 22rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

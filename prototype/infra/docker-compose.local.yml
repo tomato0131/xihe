@@ -1,0 +1,25 @@
+name: xihe-local
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: xihe-postgres-local
+    restart: unless-stopped
+    env_file:
+      - .env.local
+    ports:
+      - "127.0.0.1:15432:5432"
+    volumes:
+      - ../.local/postgres:/var/lib/postgresql/data
+      - ./postgres/init/00-local-auth.sql:/docker-entrypoint-initdb.d/00-local-auth.sql:ro
+      - ../supabase/migrations/202607060001_initial_schema.sql:/docker-entrypoint-initdb.d/10-initial-schema.sql:ro
+      - ./postgres/init/15-local-credentials.sql:/docker-entrypoint-initdb.d/15-local-credentials.sql:ro
+      - ../supabase/migrations/202607090001_wechat_identities.sql:/docker-entrypoint-initdb.d/16-wechat-identities.sql:ro
+      - ./postgres/init/20-local-seed.sql:/docker-entrypoint-initdb.d/20-local-seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    security_opt:
+      - no-new-privileges:true

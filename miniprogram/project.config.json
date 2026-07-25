@@ -1,0 +1,16 @@
+{
+  "appid": "touristappid",
+  "projectname": "xihe-miniprogram",
+  "description": "羲和 - 智能生日管家微信小程序",
+  "compileType": "miniprogram",
+  "miniprogramRoot": "./",
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "coverView": true
+  },
+  "condition": {}
+}

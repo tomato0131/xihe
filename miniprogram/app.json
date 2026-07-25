@@ -1,0 +1,15 @@
+{
+  "pages": [
+    "pages/login/login",
+    "pages/home/home"
+  ],
+  "window": {
+    "navigationBarTitleText": "羲和",
+    "navigationBarBackgroundColor": "#f8efe3",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f8efe3",
+    "backgroundTextStyle": "dark"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

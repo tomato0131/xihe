@@ -1,0 +1,17 @@
+<view class="page-shell login-page">
+  <view class="hero">
+    <view class="sun-mark"></view>
+    <view class="eyebrow">日光时序 · 生日关怀</view>
+    <view class="title">羲和</view>
+    <view class="subtitle">记住重要的人，也记住每一次值得抵达的心意。</view>
+  </view>
+
+  <view class="card login-card">
+    <view class="card-title">微信登录</view>
+    <view class="card-copy">使用微信身份进入羲和，小程序会把你的生日数据与个人账号绑定。</view>
+    <button class="primary-button" loading="{{loading}}" disabled="{{loading}}" bindtap="handleLogin">
+      {{loading ? '正在连接微信…' : '微信一键登录'}}
+    </button>
+    <view class="hint">首次联调前，请先在服务端配置小程序 AppID 和 AppSecret。</view>
+  </view>
+</view>
