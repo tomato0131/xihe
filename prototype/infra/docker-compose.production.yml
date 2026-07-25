@@ -52,7 +52,7 @@ services:
     depends_on:
       - api
     ports:
-      - "80:80"
+      - "8080:80"
     networks:
       - xihe-private
     security_opt:
