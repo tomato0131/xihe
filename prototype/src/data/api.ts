@@ -8,14 +8,21 @@ function formatPerson(row: any): Person {
   const groups = Array.isArray(row.groups) ? row.groups : row.group ? [row.group] : []
   return { id: row.id, name: row.name, relation: row.relationship || '重要的人', group: row.group || groups[0] || '未分组', groups,
     date: '待计算', fullDate: `${month}月${day}日`, days: 999, image: row.avatar_path || '/assets/avatar-zhou-ziheng.png',
+    avatarPath: row.avatar_path || '', gender: row.gender || 'unknown',
     note: row.notes || '', calendarType: row.calendar_type,
     birthYearKnown, isLeapMonth: Boolean(row.is_leap_month),
     birthday: `${row.birth_year || 2000}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}` }
 }
 async function request(path: string, init?: RequestInit) {
   const token = localStorage.getItem('xihe.session')
-  const response = await fetch(path,{...init,headers:{'Content-Type':'application/json',...(token ? {Authorization:`Bearer ${token}`} : {}),...init?.headers}})
-  const body = await response.json(); if(!response.ok) throw new Error(body.error || 'API_ERROR'); return body.data
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), 10000)
+  try {
+    const response = await fetch(path,{...init,signal:controller.signal,headers:{'Content-Type':'application/json',...(token ? {Authorization:`Bearer ${token}`} : {}),...init?.headers}})
+    const body = await response.json(); if(!response.ok) throw new Error(body.error || 'API_ERROR'); return body.data
+  } finally {
+    window.clearTimeout(timeout)
+  }
 }
 async function authenticatedFetch(path: string, init?: RequestInit) {
   const token = localStorage.getItem('xihe.session')
@@ -35,7 +42,7 @@ export const api = {
   async deleteGroup(id: string): Promise<void> { await request(`/api/groups/${id}`,{method:'DELETE'}) },
   async createPerson(draft: PersonDraft): Promise<Person> { return formatPerson(await request('/api/people',{method:'POST',body:JSON.stringify(draft)})) },
   async updatePerson(id: string | number, draft: Partial<PersonDraft>): Promise<Person> { return formatPerson(await request(`/api/people/${id}`,{method:'PATCH',body:JSON.stringify(draft)})) },
-  async archivePerson(id: string | number): Promise<void> { await request(`/api/people/${id}`,{method:'DELETE'}) },
+  async deletePerson(id: string | number): Promise<void> { await request(`/api/people/${id}`,{method:'DELETE'}) },
   async previewReminders(): Promise<any[]> { return request('/api/reminders/preview') },
   async listReminderJobs(): Promise<any[]> { return request('/api/reminders/jobs') },
   async updateReminderJob(id: string, action: 'snooze' | 'complete', minutes = 120): Promise<any> {

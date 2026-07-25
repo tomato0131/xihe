@@ -32,7 +32,7 @@ const X = makeIcon('×')
 
 const navItems = [
   { id: 'home', label: '今时', icon: House },
-  { id: 'people', label: '故人', icon: Users },
+  { id: 'people', label: '老友', icon: Users },
   { id: 'calendar', label: '岁历', icon: CalendarBlank },
   { id: 'profile', label: '我的', icon: User },
 ]
@@ -44,6 +44,56 @@ function normalizeGroups(groups) {
 
 function groupNames(groups) {
   return normalizeGroups(groups).map(group => group.name)
+}
+
+function isDatabaseId(id) {
+  return typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+}
+
+function imageFileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) { resolve(''); return }
+    if (!file.type.startsWith('image/')) { reject(new Error('INVALID_IMAGE')); return }
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('READ_IMAGE_FAILED'))
+    reader.onload = () => {
+      const image = new Image()
+      image.onerror = () => reject(new Error('LOAD_IMAGE_FAILED'))
+      image.onload = () => {
+        const maxSize = 512
+        const scale = Math.min(1, maxSize / Math.max(image.width, image.height))
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.max(1, Math.round(image.width * scale))
+        canvas.height = Math.max(1, Math.round(image.height * scale))
+        const context = canvas.getContext('2d')
+        context?.drawImage(image, 0, 0, canvas.width, canvas.height)
+        resolve(canvas.toDataURL('image/jpeg', 0.82))
+      }
+      image.src = String(reader.result)
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
+const presetAvatarFiles = {
+  male: [
+    'middle-father','elder-grandpa','bald','receding-office','bearded-uncle','chubby-uncle','slim-quiet','tall-confident','muscular','hiking-hat',
+    'climber','coffee-cup','travel-scarf','scholar-glasses','bookish-nerd','cheerful-jokester','mature-business','warmhearted-volunteer','middle-tea-calm','artistic-longhair',
+    'elder-bald-grandpa','crew-cut','bald-glasses','white-beard','stocky-cheerful','thin-office','dependable-square','sporty-runner','cycling-helmet','elder-fishing',
+    'foodie-chef','musician','photographer','programmer','middle-teacher','doctor-gentle','engineer-helmet','mature-drink','introvert-calm','sunny-helper',
+  ].map(name => `/assets/ai-avatars/male-v2-${name}.jpg`),
+  female: [
+    'middle-mother','elder-grandma','short-hair-energetic','long-hair-elegant','round-glasses','chubby-auntie','slim-quiet','tall-confident','fitness','hiking-hat',
+    'climber','coffee-cup','travel-scarf','scholar','bookish-nerd','cheerful-jokester','mature-business','warmhearted-volunteer','middle-tea-calm','artistic-curly',
+    'elder-short-white','middle-bob','mature-glasses','silver-elegant','round-cheerful-auntie','slim-office','dependable-square','sporty-runner','cycling-helmet','elder-gardening',
+    'foodie-chef','musician','photographer','programmer-glasses','middle-teacher','doctor-gentle','engineer-helmet','mature-wine','introvert-calm','sunny-helper',
+  ].map(name => `/assets/ai-avatars/female-v2-${name}.jpg`),
+}
+
+function avatarGenderOptions(gender) {
+  if (gender === 'male') return presetAvatarFiles.male
+  if (gender === 'female') return presetAvatarFiles.female
+  return [...presetAvatarFiles.female.slice(0, 12), ...presetAvatarFiles.male.slice(0, 12)]
 }
 
 function searchText(value) {
@@ -160,7 +210,8 @@ function App() {
     if (!authenticated) return
     Promise.all([api.listPeople(), api.listGroups()])
       .then(([remotePeople, remoteGroups]) => {
-        if (remotePeople.length) setPeople(remotePeople)
+        setPeople(remotePeople)
+        dataStore.savePeople(remotePeople)
         setGroups(normalizeGroups(remoteGroups))
       })
       .catch(() => notify('数据库暂不可用，已切换本地模式'))
@@ -235,8 +286,8 @@ function App() {
 
   const createPerson = async (draft: PersonDraft) => {
     try {
-      const created = await api.createPerson(draft)
-      setPeople(current => [...current, created])
+      await api.createPerson(draft)
+      setPeople(await api.listPeople())
       if ((draft.groups || [draft.group]).some(group => !groupNames(groups).includes(group))) setGroups(normalizeGroups(await api.listGroups()))
       notify(`${draft.name}已保存到数据库`)
     } catch {
@@ -246,16 +297,41 @@ function App() {
   }
 
   const updatePerson = async (id, draft: Partial<PersonDraft>) => {
-    const updated = await api.updatePerson(id, draft)
-    setPeople(current => current.map(person => person.id === id ? {...person, ...updated} : person))
-    if ((draft.groups || (draft.group ? [draft.group] : [])).some(group => !groupNames(groups).includes(group))) setGroups(normalizeGroups(await api.listGroups()))
-    setSelected(updated); setModal(null); notify('人物资料已更新')
+    if (!isDatabaseId(id)) {
+      let nextPeople = []
+      setPeople(current => {
+        nextPeople = dataStore.updatePerson(current, id, draft)
+        return nextPeople
+      })
+      const updated = nextPeople.find(person => person.id === id)
+      if (updated) setSelected(updated)
+      setModal(null)
+      notify('本地人物资料已更新')
+      return
+    }
+    try {
+      const updated = await api.updatePerson(id, draft)
+      setPeople(current => current.map(person => person.id === id ? {...person, ...updated} : person))
+      if ((draft.groups || (draft.group ? [draft.group] : [])).some(group => !groupNames(groups).includes(group))) setGroups(normalizeGroups(await api.listGroups()))
+      setSelected(updated); setModal(null); notify('人物资料已更新')
+    } catch {
+      let nextPeople = []
+      setPeople(current => {
+        nextPeople = dataStore.updatePerson(current, id, draft)
+        return nextPeople
+      })
+      const updated = nextPeople.find(person => person.id === id)
+      if (updated) setSelected(updated)
+      setModal(null)
+      notify('数据库保存失败，已先保存在本机')
+    }
   }
 
-  const archivePerson = async (id) => {
-    await api.archivePerson(id)
+  const deletePerson = async (id) => {
+    if (!window.confirm('确认删除这个人物吗？相关生日、提醒和关怀记录也会一起删除。')) return
+    if (isDatabaseId(id)) await api.deletePerson(id)
     setPeople(current => current.filter(person => person.id !== id))
-    setSelected(null); notify('人物已归档')
+    setSelected(null); notify('人物已删除')
   }
 
   const openBlessing = (person) => {
@@ -314,7 +390,7 @@ function App() {
       {modal === 'edit' && selected && <EditPerson person={selected} groups={groups} onClose={() => setModal(null)} onSave={draft => updatePerson(selected.id, draft)} />}
       {modal === 'import' && <ImportFlow onClose={() => setModal(null)} notify={notify} />}
       {modal === 'bless' && blessingPerson && <Blessing person={blessingPerson} onCare={recordCare} onClose={() => { setModal(null); setBlessingPerson(null) }} notify={notify} />}
-      {selected && modal !== 'edit' && modal !== 'bless' && <PersonDetail person={selected} careRecords={careRecords.filter(record => record.person_id === selected.id)} onBless={openBlessing} onCare={recordCare} onGroup={openPeopleGroup} onClose={() => setSelected(null)} notify={notify} onEdit={() => setModal('edit')} onArchive={() => archivePerson(selected.id)} />}
+      {selected && modal !== 'edit' && modal !== 'bless' && <PersonDetail person={selected} careRecords={careRecords.filter(record => record.person_id === selected.id)} onBless={openBlessing} onCare={recordCare} onGroup={openPeopleGroup} onClose={() => setSelected(null)} notify={notify} onEdit={() => setModal('edit')} onDelete={() => deletePerson(selected.id)} />}
       {toast && <div className="toast"><CheckCircle weight="fill" />{toast}</div>}
     </div>
   )
@@ -325,7 +401,7 @@ function LoginScreen({ onLogin }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  return <div className="login-shell"><div className="login-sun">日</div><section className="login-card"><p className="eyebrow">重要的人，值得被记住</p><h1>羲和<span>。</span></h1><p className="login-lead">登录后，生日、分组与提醒会安全保存在你的专属空间。</p><form className="form" onSubmit={async e=>{e.preventDefault();setLoading(true);setError('');try{await api.login(email,password);onLogin()}catch{setError('账号或密码不正确')}finally{setLoading(false)}}}><label>账号<input type="text" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="admin 或邮箱" /></label><label>密码<input type="password" required minLength={10} value={password} onChange={e=>setPassword(e.target.value)} placeholder="输入登录密码" /></label>{error&&<p className="form-error">{error}</p>}<button className="primary full" disabled={loading}>{loading?'正在登录…':'进入羲和'}</button></form><p className="login-note">本地开发环境 · 会话 8 小时后自动失效</p></section></div>
+  return <div className="login-shell"><div className="login-sun">日</div><section className="login-card"><p className="eyebrow">重要的人，值得被记住</p><h1>羲和</h1><p className="login-lead">登录后，生日、分组与提醒会安全保存在你的专属空间。</p><form className="form" onSubmit={async e=>{e.preventDefault();setLoading(true);setError('');try{await api.login(email,password);onLogin()}catch{setError('账号或密码不正确')}finally{setLoading(false)}}}><label>账号<input type="text" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="admin 或邮箱" /></label><label>密码<input type="password" required minLength={10} value={password} onChange={e=>setPassword(e.target.value)} placeholder="输入登录密码" /></label>{error&&<p className="form-error">{error}</p>}<button className="primary full" disabled={loading}>{loading?'正在登录…':'进入羲和'}</button></form><p className="login-note">本地开发环境 · 会话 8 小时后自动失效</p></section></div>
 }
 
 function formatTodayLine() {
@@ -411,9 +487,8 @@ function Home({ people, reminders, careRecords, onReminderAction, onRefreshRemin
   }
   return <div className="screen home-screen">
     <header className="home-header reveal">
-      <div className="brand-row"><span className="brand">羲和<span>。</span></span><button className="icon-button" onClick={onAdd} aria-label="添加人物"><Plus /></button></div>
+      <div className="brand-row"><span className="brand">羲和</span><button className="icon-button" onClick={onAdd} aria-label="添加人物"><Plus /></button></div>
       <p className="date-line">{formatTodayLine()}</p>
-      <h1>今日，<br />也别忘了<span>重要</span>的人</h1>
       <div className="sun-orb"><Sun weight="duotone" /></div>
     </header>
 
@@ -625,7 +700,7 @@ function People({ people, careRecords, groups, group, setGroup, birthdayFilter, 
     return [p.name, p.relation, p.note, p.group, ...(p.groups || []), careStatusText(latestCare), latestCare?.content, ...birthdaySearchTokens(p)].some(value => searchText(value).includes(normalizedQuery))
   })
   return <div className="screen inner-screen">
-    <header className="page-header reveal"><div><p className="eyebrow">故人如故</p><h1>重要的人</h1></div><button className="round-add" onClick={onAdd}><Plus /></button></header>
+    <header className="page-header reveal"><div><p className="eyebrow">老友如新</p><h1>重要的人</h1></div><button className="round-add" onClick={onAdd}><Plus /></button></header>
     <div className="search reveal"><MagnifyingGlass /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="搜索姓名、关系、备注、分组或生日" /><SlidersHorizontal /></div>
     <div className="group-strip reveal">{normalizedGroups.map(g => <button className={g.name === group ? 'active' : ''} onClick={() => setGroup(g.name)} key={g.id}>{g.name}</button>)}<button onClick={() => setEditingGroups(true)}><Plus />分组</button></div>
     <div className="birthday-filter-strip reveal">{birthdayFilters.map(item => <button className={item.id === birthdayFilter ? 'active' : ''} onClick={() => setBirthdayFilter(item.id)} key={item.id}>{item.label}</button>)}</div>
@@ -676,7 +751,7 @@ function YearView({ people, onPerson, onMonth }) {
   const thisMonthCount = counts[currentMonth + 1] || 0
   const futureThirtyCount = people.filter(person => person.days >= 0 && person.days <= 30).length
   const selectedMonthPeople = people.filter(person => birthdayMonth(person) === selectedMonth + 1)
-  return <div className="screen inner-screen year-screen"><header className="page-header reveal"><div><p className="eyebrow">岁时有序</p><h1>岁历</h1></div><button className="year-switch">{new Date().getFullYear()} <CaretRight /></button></header><div className="solar-arc reveal"><Sun weight="duotone" /><div><strong>下一位生日</strong><span>{next ? `${next.name} · ${next.date}` : '尚未录入生日'}</span></div></div><section className="year-overview reveal"><div><strong>{people.length}</strong><span>已记录</span></div><div><strong>{thisMonthCount}</strong><span>本月</span></div><div><strong>{futureThirtyCount}</strong><span>未来30天</span></div></section><div className="month-grid reveal">{months.map((m, i) => <button className={`${i === currentMonth ? 'current' : ''}${i === selectedMonth ? ' selected' : ''}`} key={m} onClick={() => setSelectedMonth(i)} aria-label={`预览${i + 1}月生日人物`}><strong>{m}</strong><span>{counts[i + 1] ? `${counts[i + 1]} 个生日` : '—'}</span>{i === currentMonth && <i />}</button>)}</div><section className="month-people reveal"><div className="section-title compact"><div><p className="section-kicker">{months[selectedMonth]} · {selectedMonthPeople.length || 0} 位故人</p><p>{selectedMonth === currentMonth ? '本月日光刻度' : '按录入生日月份归类'}</p></div><button onClick={() => onMonth(selectedMonth + 1)}>查看全部 <CaretRight /></button></div>{selectedMonthPeople.length ? selectedMonthPeople.slice(0, 4).map(p => <button onClick={() => onPerson(p)} key={p.id}><time>{(p.fullDate || p.nextDateLabel).replace('月',' / ').replace('日','')}</time><img src={p.image} alt=""/><strong>{p.name}</strong><span>{p.relation}</span></button>) : <p className="empty-line">这个月暂时没有生日记录。可以先去新增一位重要的人。</p>}</section></div>
+  return <div className="screen inner-screen year-screen"><header className="page-header reveal"><div><p className="eyebrow">岁时有序</p><h1>岁历</h1></div><button className="year-switch">{new Date().getFullYear()} <CaretRight /></button></header><div className="solar-arc reveal"><Sun weight="duotone" /><div><strong>下一位生日</strong><span>{next ? `${next.name} · ${next.date}` : '尚未录入生日'}</span></div></div><section className="year-overview reveal"><div><strong>{people.length}</strong><span>已记录</span></div><div><strong>{thisMonthCount}</strong><span>本月</span></div><div><strong>{futureThirtyCount}</strong><span>未来30天</span></div></section><div className="month-grid reveal">{months.map((m, i) => <button className={`${i === currentMonth ? 'current' : ''}${i === selectedMonth ? ' selected' : ''}`} key={m} onClick={() => setSelectedMonth(i)} aria-label={`预览${i + 1}月生日人物`}><strong>{m}</strong><span>{counts[i + 1] ? `${counts[i + 1]} 个生日` : '—'}</span>{i === currentMonth && <i />}</button>)}</div><section className="month-people reveal"><div className="section-title compact"><div><p className="section-kicker">{months[selectedMonth]} · {selectedMonthPeople.length || 0} 位老友</p><p>{selectedMonth === currentMonth ? '本月日光刻度' : '按录入生日月份归类'}</p></div><button onClick={() => onMonth(selectedMonth + 1)}>查看全部 <CaretRight /></button></div>{selectedMonthPeople.length ? selectedMonthPeople.slice(0, 4).map(p => <button onClick={() => onPerson(p)} key={p.id}><time>{(p.fullDate || p.nextDateLabel).replace('月',' / ').replace('日','')}</time><img src={p.image} alt=""/><strong>{p.name}</strong><span>{p.relation}</span></button>) : <p className="empty-line">这个月暂时没有生日记录。可以先去新增一位重要的人。</p>}</section></div>
 }
 
 function Profile({ reminders, onRefreshReminders, onRunReminders, onImport, onRestoreComplete, notify, onLogout }) {
@@ -745,42 +820,86 @@ function Profile({ reminders, onRefreshReminders, onRunReminders, onImport, onRe
 
 function BottomNav({ view, setView }) { return <nav className="bottom-nav">{navItems.map(item => { const Icon = item.icon; return <button key={item.id} className={view === item.id ? 'active' : ''} onClick={() => setView(item.id)}><Icon weight={view === item.id ? 'fill' : 'regular'} /><span>{item.label}</span></button> })}</nav> }
 
-function Sheet({ children, onClose, tall = false }) { return <div className="modal-layer"><button className="modal-backdrop" aria-label="关闭" onClick={onClose}/><section className={`modal-sheet ${tall ? 'tall' : ''}`}><div className="sheet-handle"/><button className="sheet-close" onClick={onClose}><X /></button>{children}</section></div> }
+function Sheet({ children, onClose, tall = false }) { return <div className="modal-layer"><button type="button" className="modal-backdrop" aria-label="关闭" onClick={onClose}/><section className={`modal-sheet ${tall ? 'tall' : ''}`}><div className="sheet-handle"/><button type="button" className="sheet-close" onClick={onClose}><X /></button>{children}</section></div> }
 
 function groupOptions(groups) {
   return normalizeGroups(groups).filter(group => group.id !== 'all').map(group => group.name)
 }
 
 function MultiGroupField({ groups, selectedGroups, setSelectedGroups }) {
-  const options = groupOptions(groups)
+  const options = Array.from(new Set([...groupOptions(groups), ...selectedGroups.map(group => group?.trim()).filter(Boolean)]))
   const [custom, setCustom] = useState('')
   const toggle = (name) => setSelectedGroups(selectedGroups.includes(name) ? selectedGroups.filter(group => group !== name) : [...selectedGroups, name])
-  const addCustom = () => {
+  const addCustom = (event?: any) => {
+    event?.preventDefault?.()
+    event?.stopPropagation?.()
     const name = custom.trim()
-    if (!name || selectedGroups.includes(name)) return
-    setSelectedGroups([...selectedGroups, name])
+    if (!name) return
+    setSelectedGroups(current => current.includes(name) ? current : [...current, name])
     setCustom('')
   }
-  return <label>分组<div className="multi-group-picker">{options.map(option => <button type="button" className={selectedGroups.includes(option) ? 'active' : ''} onClick={() => toggle(option)} key={option}>{option}</button>)}</div><div className="inline-create"><input maxLength={50} value={custom} onChange={e => setCustom(e.target.value)} placeholder="输入新分组名称" /><button type="button" onClick={addCustom}>添加</button></div>{selectedGroups.length > 0 && <p className="selected-groups">已选：{selectedGroups.join('、')}</p>}</label>
+  return <div className="group-field"><span className="field-label">分组</span><div className="multi-group-picker">{options.map(option => <button type="button" className={selectedGroups.includes(option) ? 'active' : ''} onClick={event => { event.preventDefault(); event.stopPropagation(); toggle(option) }} key={option}>{option}</button>)}</div><div className="inline-create"><input maxLength={50} value={custom} onChange={e => setCustom(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') addCustom(e) }} placeholder="输入新分组名称" /><button type="button" onClick={addCustom}>添加</button></div>{selectedGroups.length > 0 && <p className="selected-groups">已选：{selectedGroups.join('、')}</p>}</div>
+}
+
+function ExistingGroupSelect({ groups, selectedGroup, setSelectedGroup }) {
+  const options = groupOptions(groups)
+  return <label>分组<select required value={selectedGroup} onChange={event => setSelectedGroup(event.target.value)}>{options.map(option => <option value={option} key={option}>{option}</option>)}</select></label>
+}
+
+function PresetAvatarPicker({ gender, avatarPath, setAvatarPath, uploadAvatar }) {
+  const avatars = avatarGenderOptions(gender)
+  return <div className="avatar-choice-panel">
+    <div className="avatar-choice-column">
+      <div className="avatar-choice-head"><strong>选择头像</strong><span>{gender === 'male' ? '仅显示男性头像' : gender === 'female' ? '仅显示女性头像' : '请选择性别后会更精准'}</span></div>
+      <div className="preset-avatar-grid">{avatars.map(src => <button type="button" className={avatarPath === src ? 'active' : ''} onClick={() => setAvatarPath(src)} key={src}><img src={src} alt="" /></button>)}</div>
+    </div>
+    <label className="avatar-upload-column">
+      <strong>自定义上传</strong>
+      <span>{avatarPath && avatarPath.startsWith('data:') ? '已选择自定义头像' : '从本地选择照片'}</span>
+      <div>{avatarPath && avatarPath.startsWith('data:') ? <img src={avatarPath} alt="头像预览" /> : <UploadSimple />}</div>
+      <input type="file" accept="image/*" onChange={e => uploadAvatar(e.target.files?.[0])} />
+    </label>
+  </div>
 }
 
 function AddPerson({ groups, initialGroup, onClose, onImport, onCreate }) {
   const [name, setName] = useState('')
   const [relation, setRelation] = useState('亲人')
-  const [selectedGroups, setSelectedGroups] = useState(() => [initialGroup || groupOptions(groups)[0] || '亲人'])
+  const [gender, setGender] = useState('unknown')
   const [birthday, setBirthday] = useState('1995-05-18')
   const [calendarType, setCalendarType] = useState<'solar' | 'lunar'>('solar')
-  const [birthYearKnown, setBirthYearKnown] = useState(true)
   const [isLeapMonth, setIsLeapMonth] = useState(false)
+  const [avatarPath, setAvatarPath] = useState('')
+  const [avatarError, setAvatarError] = useState('')
   const [note, setNote] = useState('')
-  return <Sheet onClose={onClose} tall><div className="modal-heading"><p className="eyebrow">记住一个重要的人</p><h2>新增生日</h2></div><div className="method-switch"><button className="active">手动录入</button><button onClick={onImport}>文件导入</button></div><form className="form" onSubmit={e => { e.preventDefault(); const cleanGroups = selectedGroups.map(g => g.trim()).filter(Boolean); onCreate({ name, relation, group: cleanGroups[0], groups: cleanGroups, birthday, calendarType, birthYearKnown, isLeapMonth, note }); onClose() }}><label>姓名<input required maxLength={100} value={name} onChange={e => setName(e.target.value)} placeholder="怎么称呼 TA" /></label><div className="form-row"><label>关系<select value={relation} onChange={e => setRelation(e.target.value)}><option>亲人</option><option>朋友</option><option>同事</option></select></label><MultiGroupField groups={groups} selectedGroups={selectedGroups} setSelectedGroups={setSelectedGroups} /></div><div className="form-row"><label>生日<input type="date" required value={birthday} onChange={e => setBirthday(e.target.value)} /></label><label>历法<select value={calendarType} onChange={e => { setCalendarType(e.target.value as 'solar' | 'lunar'); if (e.target.value === 'solar') setIsLeapMonth(false) }}><option value="solar">公历</option><option value="lunar">农历</option></select></label></div><label className="option-row"><input type="checkbox" checked={!birthYearKnown} onChange={e => setBirthYearKnown(!e.target.checked)} /><span>不确定出生年份，只记月日</span></label>{calendarType === 'lunar' && <label className="option-row"><input type="checkbox" checked={isLeapMonth} onChange={e => setIsLeapMonth(e.target.checked)} /><span>这是农历闰月生日</span></label>}<label>备注<textarea maxLength={2000} value={note} onChange={e => setNote(e.target.value)} placeholder="喜欢什么、最近在忙什么……" /></label><button className="primary full" type="submit">保存生日</button></form></Sheet>
+  const uploadAvatar = async (file) => {
+    setAvatarError('')
+    try {
+      setAvatarPath(await imageFileToDataUrl(file))
+    } catch {
+      setAvatarError('头像读取失败，请换一张图片')
+    }
+  }
+  return <Sheet onClose={onClose} tall><div className="modal-heading"><p className="eyebrow">记住一个重要的人</p><h2>新增生日</h2></div><div className="method-switch"><button className="active">手动录入</button><button onClick={onImport}>文件导入</button></div><form className="form" onSubmit={e => { e.preventDefault(); const group = relation.trim(); onCreate({ name, relation, gender, group, groups: [group], birthday, calendarType, birthYearKnown: true, isLeapMonth, note, avatarPath }); onClose() }}><label>姓名<input required maxLength={100} value={name} onChange={e => setName(e.target.value)} placeholder="怎么称呼 TA" /></label><div className="form-row"><label>关系<select value={relation} onChange={e => setRelation(e.target.value)}><option>亲人</option><option>朋友</option><option>同事</option></select></label><label>性别<select value={gender} onChange={e => { const nextGender = e.target.value; setGender(nextGender); if ((nextGender === 'male' && avatarPath.includes('/female-')) || (nextGender === 'female' && avatarPath.includes('/male-'))) setAvatarPath('') }}><option value="unknown">不指定</option><option value="female">女</option><option value="male">男</option></select></label></div><div className="form-row"><label>生日<input type="date" required value={birthday} onChange={e => setBirthday(e.target.value)} /></label><label>历法<select value={calendarType} onChange={e => { setCalendarType(e.target.value as 'solar' | 'lunar'); if (e.target.value === 'solar') setIsLeapMonth(false) }}><option value="solar">公历</option><option value="lunar">农历</option></select></label></div><label>头像<PresetAvatarPicker gender={gender} avatarPath={avatarPath} setAvatarPath={setAvatarPath} uploadAvatar={uploadAvatar} /></label>{avatarError && <p className="form-error">{avatarError}</p>}{calendarType === 'lunar' && <label className="option-row"><input type="checkbox" checked={isLeapMonth} onChange={e => setIsLeapMonth(e.target.checked)} /><span>这是农历闰月生日</span></label>}<label>备注<textarea maxLength={2000} value={note} onChange={e => setNote(e.target.value)} placeholder="喜欢什么、最近在忙什么、有什么需要记住的小事……" /></label><button className="primary full" type="submit">保存生日</button></form></Sheet>
 }
 
 function EditPerson({ person, groups, onClose, onSave }) {
   const [name,setName]=useState(person.name),[relation,setRelation]=useState(person.relation),[selectedGroups,setSelectedGroups]=useState(person.groups?.length ? person.groups : [person.group])
   const [birthday,setBirthday]=useState(person.birthday),[calendarType,setCalendarType]=useState(person.calendarType),[note,setNote]=useState(person.note)
-  const [birthYearKnown,setBirthYearKnown]=useState(person.birthYearKnown ?? true),[isLeapMonth,setIsLeapMonth]=useState(person.isLeapMonth ?? false)
-  return <Sheet onClose={onClose} tall><div className="modal-heading"><p className="eyebrow">更新关系记忆</p><h2>编辑人物</h2></div><form className="form edit-form" onSubmit={e=>{e.preventDefault(); const cleanGroups = selectedGroups.map(g => g.trim()).filter(Boolean); onSave({name,relation,group:cleanGroups[0],groups:cleanGroups,birthday,calendarType,birthYearKnown,isLeapMonth,note})}}><label>姓名<input required maxLength={100} value={name} onChange={e=>setName(e.target.value)}/></label><div className="form-row"><label>关系<input maxLength={50} value={relation} onChange={e=>setRelation(e.target.value)}/></label><MultiGroupField groups={groups} selectedGroups={selectedGroups} setSelectedGroups={setSelectedGroups} /></div><div className="form-row"><label>生日<input type="date" required value={birthday} onChange={e=>setBirthday(e.target.value)}/></label><label>历法<select value={calendarType} onChange={e=>{setCalendarType(e.target.value as 'solar' | 'lunar'); if(e.target.value==='solar') setIsLeapMonth(false)}}><option value="solar">公历</option><option value="lunar">农历</option></select></label></div><label className="option-row"><input type="checkbox" checked={!birthYearKnown} onChange={e=>setBirthYearKnown(!e.target.checked)} /><span>不确定出生年份，只记月日</span></label>{calendarType === 'lunar' && <label className="option-row"><input type="checkbox" checked={isLeapMonth} onChange={e=>setIsLeapMonth(e.target.checked)} /><span>这是农历闰月生日</span></label>}<label>备注<textarea maxLength={2000} value={note} onChange={e=>setNote(e.target.value)}/></label><button className="primary full">保存修改</button></form></Sheet>
+  const [birthYearKnown]=useState(person.birthYearKnown ?? true),[isLeapMonth,setIsLeapMonth]=useState(person.isLeapMonth ?? false)
+  const [saving,setSaving]=useState(false)
+  const submitEdit = async (event) => {
+    event.preventDefault()
+    if (saving) return
+    setSaving(true)
+    const cleanGroups = selectedGroups.map(g => g.trim()).filter(Boolean)
+    try {
+      await onSave({name,relation,group:cleanGroups[0],groups:cleanGroups,birthday,calendarType,birthYearKnown,isLeapMonth,note})
+    } finally {
+      setSaving(false)
+    }
+  }
+  return <Sheet onClose={onClose} tall><div className="modal-heading"><p className="eyebrow">更新关系记忆</p><h2>编辑人物</h2></div><form className="form edit-form" onSubmit={submitEdit}><label>姓名<input required maxLength={100} value={name} onChange={e=>setName(e.target.value)}/></label><div className="form-row"><label>关系<input maxLength={50} value={relation} onChange={e=>setRelation(e.target.value)}/></label><MultiGroupField groups={groups} selectedGroups={selectedGroups} setSelectedGroups={setSelectedGroups} /></div><div className="form-row"><label>生日<input type="date" required value={birthday} onChange={e=>setBirthday(e.target.value)}/></label><label>历法<select value={calendarType} onChange={e=>{setCalendarType(e.target.value as 'solar' | 'lunar'); if(e.target.value==='solar') setIsLeapMonth(false)}}><option value="solar">公历</option><option value="lunar">农历</option></select></label></div>{calendarType === 'lunar' && <label className="option-row"><input type="checkbox" checked={isLeapMonth} onChange={e=>setIsLeapMonth(e.target.checked)} /><span>这是农历闰月生日</span></label>}<label>备注<textarea maxLength={2000} value={note} onChange={e=>setNote(e.target.value)}/></label><button className="primary full" type="submit" disabled={saving}>{saving ? '正在保存…' : '保存修改'}</button></form></Sheet>
 }
 
 function ImportFlow({ onClose, notify }) {
@@ -838,10 +957,10 @@ function CareRecordComposer({ person, onCare }) {
   </form>
 }
 
-function PersonDetail({ person, careRecords, onBless, onCare, onGroup, onClose, notify, onEdit, onArchive }) {
+function PersonDetail({ person, careRecords, onBless, onCare, onGroup, onClose, notify, onEdit, onDelete }) {
   const detailGroups = person.groups?.length ? person.groups : [person.group]
   const rhythm = careRhythm(person, careRecords)
-  return <Sheet onClose={onClose} tall><div className="detail-portrait"><img src={person.image} alt={person.name}/><span>{person.date}</span></div><div className="detail-title"><p className="eyebrow">{person.relation}</p><h2>{person.name}</h2><div className="detail-group-tags">{detailGroups.filter(Boolean).map(group => <button type="button" onClick={() => onGroup(group)} key={group}>{group}</button>)}</div><p>{person.fullDate} · {person.nextDateLabel ? `下次 ${person.nextDateLabel}` : ''}{person.birthYearKnown === false ? ' · 年份未知' : ''}</p></div><div className="detail-actions"><button onClick={() => onBless(person)}><NotePencil /><span>写祝福</span></button><button onClick={() => onCare(person.id, 'contact', `联系${person.name}`)}><Phone /><span>联系TA</span></button><button onClick={() => onCare(person.id, 'gift', `为${person.name}准备礼物`)}><Gift /><span>备礼物</span></button></div><section className="care-rhythm"><div><p className="section-kicker">关怀节奏</p><strong>{rhythm.birthdayText}</strong><span>{rhythm.latestText}</span></div><p>{rhythm.suggestion}</p><button onClick={() => onCare(person.id, 'completed', `记录一次对${person.name}的关怀`)}><CheckCircle />记一次关怀</button></section><CareRecordComposer person={person} onCare={onCare} /><section className="memory-note"><p className="section-kicker">关于 TA</p><p>{person.note||'还没有备注'}</p></section><section className="care-timeline"><p className="section-kicker">关怀记录</p>{careRecords.length ? careRecords.slice(0, 6).map(record => <div className="care-timeline-item" key={record.id}><i /><div><strong>{careActionLabel(record.action_type)}</strong><span>{formatCareTime(record.completed_at)}</span>{record.content && <p>{record.content}</p>}</div></div>) : <p className="empty-line">还没有关怀记录。一次祝福、一次联系，都会在这里留下痕迹。</p>}</section><section className="reminder-card"><Bell weight="duotone"/><div><strong>提醒节奏</strong><span>提前 3 天 + 当天 09:00</span></div><CaretRight /></section><button className="secondary full" onClick={onEdit}>编辑资料</button><button className="archive-button" onClick={onArchive}>归档此人物</button></Sheet>
+  return <Sheet onClose={onClose} tall><div className="detail-portrait"><img src={person.image} alt={person.name}/><span>{person.date}</span></div><div className="detail-title"><p className="eyebrow">{person.relation}</p><h2>{person.name}</h2><div className="detail-group-tags">{detailGroups.filter(Boolean).map(group => <button type="button" onClick={() => onGroup(group)} key={group}>{group}</button>)}</div><p>{person.fullDate} · {person.nextDateLabel ? `下次 ${person.nextDateLabel}` : ''}{person.birthYearKnown === false ? ' · 年份未知' : ''}</p></div><div className="detail-actions"><button onClick={() => onBless(person)}><NotePencil /><span>写祝福</span></button><button onClick={() => onCare(person.id, 'contact', `联系${person.name}`)}><Phone /><span>联系TA</span></button><button onClick={() => onCare(person.id, 'gift', `为${person.name}准备礼物`)}><Gift /><span>备礼物</span></button></div><section className="care-rhythm"><div><p className="section-kicker">关怀节奏</p><strong>{rhythm.birthdayText}</strong><span>{rhythm.latestText}</span></div><p>{rhythm.suggestion}</p><button onClick={() => onCare(person.id, 'completed', `记录一次对${person.name}的关怀`)}><CheckCircle />记一次关怀</button></section><CareRecordComposer person={person} onCare={onCare} /><section className="memory-note"><p className="section-kicker">关于 TA</p><p>{person.note||'还没有备注'}</p></section><section className="care-timeline"><p className="section-kicker">关怀记录</p>{careRecords.length ? careRecords.slice(0, 6).map(record => <div className="care-timeline-item" key={record.id}><i /><div><strong>{careActionLabel(record.action_type)}</strong><span>{formatCareTime(record.completed_at)}</span>{record.content && <p>{record.content}</p>}</div></div>) : <p className="empty-line">还没有关怀记录。一次祝福、一次联系，都会在这里留下痕迹。</p>}</section><section className="reminder-card"><Bell weight="duotone"/><div><strong>提醒节奏</strong><span>提前 3 天 + 当天 09:00</span></div><CaretRight /></section><button className="secondary full" onClick={onEdit}>编辑资料</button><button className="delete-button" onClick={onDelete}>删除人物</button></Sheet>
 }
 
 export { App }

@@ -1,9 +1,10 @@
 export type CalendarType = 'solar' | 'lunar'
 
 export interface Person {
-  id: number
+  id: string | number
   name: string
   relation: string
+  gender?: string
   group: string
   groups?: string[]
   date: string
@@ -14,6 +15,7 @@ export interface Person {
   birthdayLabel?: string
   isToday?: boolean
   image: string
+  avatarPath?: string
   note: string
   calendarType: CalendarType
   birthYearKnown?: boolean
@@ -24,6 +26,7 @@ export interface Person {
 export interface PersonDraft {
   name: string
   relation: string
+  gender?: string
   group: string
   groups?: string[]
   birthday: string
@@ -31,6 +34,7 @@ export interface PersonDraft {
   birthYearKnown?: boolean
   isLeapMonth?: boolean
   note?: string
+  avatarPath?: string
 }
 
 export const seedPeople: Person[] = [

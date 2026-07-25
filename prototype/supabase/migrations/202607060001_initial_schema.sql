@@ -19,6 +19,7 @@ create table public.people (
   user_id uuid not null references auth.users(id) on delete cascade,
   name text not null check (char_length(name) between 1 and 100),
   relationship text check (char_length(relationship) <= 50),
+  gender text not null default 'unknown' check (gender in ('female','male','unknown')),
   avatar_path text,
   notes text check (char_length(notes) <= 2000),
   archived_at timestamptz,
