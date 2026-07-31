@@ -1,7 +1,6 @@
 const config = {
-  // 开发联调默认连接当前 CentOS 7.9 虚拟机部署的羲和服务。
-  // 正式小程序发布前必须替换为 HTTPS 域名，并在微信后台配置 request 合法域名。
-  apiBaseUrl: 'http://SERVER_IP:8080'
+  // 生产环境只使用 HTTPS 域名；不要在仓库中填写服务器 IP、调试端口或凭据。
+  apiBaseUrl: 'https://xihe.wangyizhe.cn'
 }
 
 module.exports = config

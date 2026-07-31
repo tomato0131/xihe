@@ -54,8 +54,8 @@ sh sync-to-centos7-vm.sh
 确认目标类似：
 
 ```text
-DEPLOY_USER@SERVER_IP:/data/xihe/app/
-SSH port: SSH_PORT
+DEPLOY_USER@YOUR_SERVER:/data/xihe/app/
+SSH port: 按环境配置
 ```
 
 确认排除项包含：
@@ -268,7 +268,7 @@ docker logs xihe-postgres --tail 100
 在本机浏览器打开：
 
 ```text
-http://SERVER_IP:8080
+https://你的羲和域名
 ```
 
 使用 `create-production-env.sh` 生成的管理员账号登录。
@@ -401,7 +401,7 @@ docker compose -f docker-compose.production.yml up -d
 
 满足以下条件即可认为阶段 C 服务器试运行部署完成：
 
-- [ ] 浏览器可访问 `http://SERVER_IP:8080`。
+- [ ] 浏览器可通过正式 HTTPS 域名访问。
 - [ ] 管理员账号可登录。
 - [ ] 可以新增人员。
 - [ ] 可以查看提醒。

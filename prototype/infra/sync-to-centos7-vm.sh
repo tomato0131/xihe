@@ -13,9 +13,9 @@ set -eu
 #   sh sync-to-centos7-vm.sh --apply
 #
 # 可选环境变量：
-#   XIHE_SSH_HOST=SERVER_IP
-#   XIHE_SSH_PORT=SSH_PORT
-#   XIHE_SSH_USER=root
+#   XIHE_SSH_HOST=your-server.example
+#   XIHE_SSH_PORT=22
+#   XIHE_SSH_USER=deploy
 #   XIHE_REMOTE_APP_DIR=/data/xihe/app
 #   XIHE_RSYNC_DELETE=1
 #
@@ -25,9 +25,9 @@ MODE="${1:---plan}"
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 PROJECT_ROOT="$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)"
 
-SSH_HOST="${XIHE_SSH_HOST:-SERVER_IP}"
-SSH_PORT="${XIHE_SSH_PORT:-SSH_PORT}"
-SSH_USER="${XIHE_SSH_USER:-root}"
+SSH_HOST="${XIHE_SSH_HOST:-}"
+SSH_PORT="${XIHE_SSH_PORT:-22}"
+SSH_USER="${XIHE_SSH_USER:-}"
 REMOTE_APP_DIR="${XIHE_REMOTE_APP_DIR:-/data/xihe/app}"
 SSH_TARGET="$SSH_USER@$SSH_HOST"
 
@@ -55,6 +55,8 @@ main() {
   validate_mode
   require_command ssh
   require_command rsync
+  [ -n "$SSH_HOST" ] || fail "XIHE_SSH_HOST is required and must be set outside Git"
+  [ -n "$SSH_USER" ] || fail "XIHE_SSH_USER is required and must be set outside Git"
 
   log "Xihe sync to CentOS 7.9 VM"
   log "Mode: $MODE"

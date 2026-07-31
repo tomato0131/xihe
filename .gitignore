@@ -21,6 +21,14 @@ prototype/infra/.env.local
 prototype/infra/.env.production
 admin-login.txt
 **/admin-login.txt
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+credentials/
+secrets/
 
 # Backups and database dumps
 *.dump

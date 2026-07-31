@@ -107,7 +107,7 @@ WECHAT_MINIPROGRAM_SECRET=小程序AppSecret
 miniprogram/
 ```
 
-微信开发者工具导入该目录即可预览。当前默认接口地址在 `miniprogram/utils/config.js` 中配置为 `http://SERVER_IP:8080`，用于内网开发联调；正式发布前需要替换为 HTTPS 域名，并在微信小程序后台配置 request 合法域名。
+微信开发者工具导入该目录即可预览。接口地址仅使用 HTTPS 域名；内网开发地址、端口和服务器凭据只保存在本机配置中，不进入仓库。正式发布前需在微信小程序后台配置 request 合法域名。
 
 小程序首页或启动页：
 

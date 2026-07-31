@@ -28,13 +28,13 @@ miniprogram/
 1. 打开微信开发者工具。
 2. 选择“导入项目”，项目目录选择本目录 `miniprogram`。
 3. `project.config.json` 里当前使用测试占位 `touristappid`，正式联调时替换成真实小程序 AppID。
-4. 修改 `utils/config.js` 中的 `apiBaseUrl`，默认是：
+4. 修改 `utils/config.js` 中的 `apiBaseUrl`，生产环境示例为：
 
 ```js
-apiBaseUrl: 'http://SERVER_IP:8080'
+apiBaseUrl: 'https://你的羲和域名'
 ```
 
-5. 开发工具里如使用 HTTP 或内网地址，需要临时勾选“不校验合法域名、web-view、TLS 版本以及 HTTPS 证书”。
+5. 本地联调地址仅保存在本机开发工具或未提交的配置中；不要提交 HTTP、内网地址、端口或服务器凭据。
 
 ## 服务端配置
 
